@@ -66,9 +66,27 @@ func New() *Model {
     return &Model{}
 }
 
+// TODO: Go to next list
+func (m * Model) Next() {
+    if m.focused == done {
+        m.focused = todo
+    } else {
+        m.focused++
+    }
+}
+
+// TODO: Go to prev list
+func (m * Model) Prev() {
+    if m.focused == todo {
+        m.focused = done
+    } else {
+        m.focused--
+    }
+}
+
 // TODO: call this on tea.WindowSizeMsg
 func (m *Model) initLists(width, height int) {
-    defaultList := list.New([]list.Item{}, list.NewDefaultDelegate(), width/divisor, height - divisor)
+    defaultList := list.New([]list.Item{}, list.NewDefaultDelegate(), width/divisor, height / 2)
     defaultList.SetShowHelp(false)
     m.lists = []list.Model{defaultList, defaultList, defaultList}
     // init todo
@@ -98,6 +116,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
         case tea.WindowSizeMsg:
             if !m.loaded {
+                columnStyle.Width(msg.Width / divisor)
+                focusedStyle.Width(msg.Width / divisor)
+                columnStyle.Height(msg.Height / divisor)
+                focusedStyle.Height(msg.Height / divisor)
                 m.initLists(msg.Width, msg.Height)
                 m.loaded = true
             }
@@ -106,6 +128,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             case "ctrl+c", "q":
                 m.quitting = true
                 return m, tea.Quit
+            case "left", "h":
+                m.Prev()
+            case "right", "l":
+                m.Next()
             }
     }
     var cmd tea.Cmd
@@ -122,6 +148,20 @@ func (m Model) View() string {
         inProgressView := m.lists[inProgress].View()
         doneView := m.lists[done].View()
         switch m.focused {
+        case inProgress:
+            return lipgloss.JoinHorizontal(
+                lipgloss.Left,
+                columnStyle.Render(todoView),
+                focusedStyle.Render(inProgressView),
+                columnStyle.Render(doneView),
+            )
+        case done:
+            return lipgloss.JoinHorizontal(
+                lipgloss.Left,
+                columnStyle.Render(todoView),
+                columnStyle.Render(inProgressView),
+                focusedStyle.Render(doneView),
+            )
         default:
             return lipgloss.JoinHorizontal(
                 lipgloss.Left,
